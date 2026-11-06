@@ -1,0 +1,61 @@
+digraph plant {
+  rankdir=BT; fontname="Helvetica"; nodesep=0.35; ranksep=0.7;
+  node [shape=record, fontname="Helvetica", fontsize=10, style=filled, fillcolor="#f7f7f7"];
+  edge [fontname="Helvetica", fontsize=9];
+
+  subgraph cluster_obs { label="Observer"; style=dashed; color="#888888";
+    Subject [label="{\<\<interface\>\>\nSubject\<E\>|subscribe(type, observer)\lunsubscribe(type, observer)\l}", fillcolor="#e3f0ff"];
+    Observer [label="{\<\<interface\>\>\nObserver\<E\>|onEvent(event)\l}", fillcolor="#e3f0ff"];
+    EventPublisher [label="{EventPublisher\<E\>|EnumMap\<EventType, CopyOnWriteArrayList\>\l|publish(event)\l}", fillcolor="#e3f0ff"];
+    Event [label="{\<\<interface\>\>\nEvent|type() : EventType\l}", fillcolor="#e3f0ff"];
+    TelemetrySource; ProductionCounterSource;
+    Events [label="{immutable records|TelemetryReading\lProductionCount\lLineSummary\lAlertRaised\lEmergencyStopped\lMaintenanceTicket\l}"];
+    Dashboard [label="ScadaDashboard"]; Oee [label="OeeTracker"];
+    Pred [label="PredictiveMaintenance\n(listener + subject)"];
+    Guard [label="EmergencyStopGuard\n(listener + subject)"];
+    Agg [label="LineAggregator\n(listener + subject)"];
+    Alerts [label="AlertService\n(listener + subject)"];
+  }
+
+  subgraph cluster_vis { label="Visitor"; style=dashed; color="#888888";
+    PlantElement [label="{\<\<interface\>\>\nPlantElement|id()\lname()\laccept(Visitor\<R\>) : R\l}", fillcolor="#e8f7e8"];
+    Container [label="{\<\<interface\>\>\nContainer|children()\l}", fillcolor="#e8f7e8"];
+    Equipment [label="{\<\<interface\>\>\nEquipment|powerKw()\ldowntimeCostPerHour()\l}", fillcolor="#e8f7e8"];
+    Factory; Line; Station; Robot; Conveyor; Sensor; Press; Furnace;
+    Visitor [label="{\<\<interface\>\>\nVisitor\<R\>|visitFactory / visitLine / visitStation\lvisitRobot / visitConveyor\lvisitSensor / visitPress / visitFurnace\l}", fillcolor="#e8f7e8"];
+    Fold [label="{FoldVisitor\<R\>|identity() combine() leaf()\l}"];
+    Walk [label="{WalkVisitor\<R\>|onContainer() onLeaf() result()\l}"];
+    Energy [label="EnergyVisitor"]; Downtime [label="DowntimeCostVisitor"];
+    Inventory [label="InventoryVisitor\n(accumulates state)"]; Filter [label="FaultyElementsFilter\n(returns List)"];
+    Json [label="JsonExportVisitor"]; Carbon [label="CarbonFootprintVisitor"];
+    Board [label="StatusBoard", fillcolor="#fff4d6"];
+  }
+
+  EventPublisher -> Subject [arrowhead=empty, style=dashed];
+  TelemetrySource -> EventPublisher [arrowhead=empty];
+  ProductionCounterSource -> EventPublisher [arrowhead=empty];
+  Pred -> EventPublisher [arrowhead=empty]; Guard -> EventPublisher [arrowhead=empty];
+  Agg -> EventPublisher [arrowhead=empty]; Alerts -> EventPublisher [arrowhead=empty];
+  Pred -> Observer [arrowhead=empty, style=dashed]; Guard -> Observer [arrowhead=empty, style=dashed];
+  Agg -> Observer [arrowhead=empty, style=dashed]; Alerts -> Observer [arrowhead=empty, style=dashed];
+  Dashboard -> Observer [arrowhead=empty, style=dashed]; Oee -> Observer [arrowhead=empty, style=dashed];
+  Events -> Event [arrowhead=empty, style=dashed];
+
+  Container -> PlantElement [arrowhead=empty]; Equipment -> PlantElement [arrowhead=empty];
+  Factory -> Container [arrowhead=empty, style=dashed]; Line -> Container [arrowhead=empty, style=dashed];
+  Station -> Container [arrowhead=empty, style=dashed];
+  Robot -> Equipment [arrowhead=empty, style=dashed]; Conveyor -> Equipment [arrowhead=empty, style=dashed];
+  Sensor -> Equipment [arrowhead=empty, style=dashed]; Press -> Equipment [arrowhead=empty, style=dashed];
+  Furnace -> Equipment [arrowhead=empty, style=dashed];
+  Factory -> Line [arrowhead=odiamond, label="1..*"]; Line -> Station [arrowhead=odiamond, label="1..*"];
+  Station -> Equipment [arrowhead=odiamond, label="1..*"];
+  PlantElement -> Visitor [style=dotted, label="accept(visitor)"];
+  Fold -> Visitor [arrowhead=empty, style=dashed]; Walk -> Visitor [arrowhead=empty, style=dashed];
+  Json -> Visitor [arrowhead=empty, style=dashed];
+  Energy -> Fold [arrowhead=empty]; Carbon -> Fold [arrowhead=empty]; Downtime -> Fold [arrowhead=empty];
+  Inventory -> Walk [arrowhead=empty]; Filter -> Walk [arrowhead=empty];
+  Filter -> Board [label="reads"];
+  Pred -> Board [label="writes"]; Guard -> Board [label="writes"];
+  Alerts -> Filter [label="integration:\nvisits the alert's\nstation only", style=bold, color="#cc3333", fontcolor="#cc3333"];
+  Alerts -> Downtime [style=bold, color="#cc3333"];
+}
